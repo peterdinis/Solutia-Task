@@ -31,6 +31,7 @@ export function renderCalendar(year, month) {
     const totalCells = firstWeekDay + daysInMonth;
     const rows = Math.ceil(totalCells / 7);
     let dayCounter = 1;
+
     for (let r = 0; r < rows; r++) {
         const row = document.createElement('div');
         row.className = 'row row-cols-7 g-1';
@@ -40,6 +41,7 @@ export function renderCalendar(year, month) {
             col.className = 'col';
             const cell = document.createElement('div');
             cell.className = 'day';
+
             if (cellIndex < firstWeekDay || dayCounter > daysInMonth) {
                 cell.classList.add('muted');
                 cell.innerHTML = '&nbsp;';
@@ -47,23 +49,25 @@ export function renderCalendar(year, month) {
                 const d = new Date(year, month, dayCounter);
                 const dStr = toDateStr(d);
                 const reservationsOnDate = state.reservations.filter(rr => rr.date === dStr);
-
-                let available = true;
-                const dayZero = new Date(d.getTime());
-                dayZero.setHours(0, 0, 0, 0);
-                if (dayZero < today) available = false;
-                if (reservationsOnDate.length >= 2) available = false;
+                const reservationCount = reservationsOnDate.length;
 
                 cell.innerHTML = `<div class="number">${dayCounter}</div>
-                          <div class="small-muted">${reservationsOnDate.length} reservation(s)</div>`;
+                                  <div class="small-muted">${reservationCount} reservation(s)</div>`;
 
-                if (dayZero.getTime() === today.getTime()) cell.classList.add('today');
-                if (available) cell.classList.add('available');
-                else cell.classList.add('unavailable');
+                if (d.setHours(0, 0, 0, 0) === today.getTime()) {
+                    cell.classList.add('today');
+                }
+
+                // Farba podľa počtu rezervácií
+                if (reservationCount === 0) {
+                    cell.classList.add('available');
+                } else {
+                    cell.classList.add('unavailable');
+                }
 
                 cell.addEventListener('click', () => {
-                    if (!available) {
-                        showFormAlert('This day is not available for new reservations (mock rules).', 'warning');
+                    if (reservationCount > 0) {
+                        showFormAlert('This day is not available for new reservations.', 'warning');
                         return;
                     }
                     els.dateInput.value = dStr;
@@ -73,6 +77,7 @@ export function renderCalendar(year, month) {
 
                 dayCounter++;
             }
+
             col.appendChild(cell);
             row.appendChild(col);
         }
