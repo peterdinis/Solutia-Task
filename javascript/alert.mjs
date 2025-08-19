@@ -13,5 +13,5 @@ export function showFormAlert(msg, type = 'success') {
   els.formAlert.appendChild(div);
   setTimeout(() => {
     if (els.formAlert.contains(div)) div.remove();
-  }, 4000);
+  }, 2000);
 }

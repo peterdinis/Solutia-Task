@@ -57,8 +57,7 @@ export function renderCalendar(year, month) {
                 if (d.setHours(0, 0, 0, 0) === today.getTime()) {
                     cell.classList.add('today');
                 }
-
-                // Farba podľa počtu rezervácií
+                
                 if (reservationCount === 0) {
                     cell.classList.add('available');
                 } else {
