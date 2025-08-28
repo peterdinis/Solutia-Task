@@ -1,33 +1,53 @@
 import { els } from "./state.mjs";
 
 /**
- * Shows or hides loading spinner
- * @param {boolean} show - Whether spinner should be shown
+ * Shows or hides a loading spinner element.
+ * Uses `hidden` attribute instead of inline style for better semantics.
+ * @param {boolean} show - Whether spinner should be shown.
  */
 export function showLoading(show) {
-  els.loadingSpinner.style.display = show ? 'block' : 'none';
+  if (!els?.loadingSpinner) return;
+  els.loadingSpinner.hidden = !show;
 }
 
 /**
- * Debounce function to limit function call frequency
- * @param {Function} fn - Function to debounce
- * @param {number} [wait=200] - Wait time in milliseconds
- * @returns {Function} Debounce wrapper function
+ * Debounce function to limit function call frequency.
+ * Ensures `this` context is preserved and allows cancellation/flush.
+ * @param {Function} fn - Function to debounce.
+ * @param {number} [wait=200] - Wait time in milliseconds.
+ * @returns {Function & {cancel: Function, flush: Function}} Debounced function with control methods.
  */
-export function debounce(fn, wait=200) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn.apply(this, args), wait);
+export function debounce(fn, wait = 200) {
+  let timeout;
+
+  function debounced(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn.apply(context, args), wait);
+  }
+
+  debounced.cancel = () => clearTimeout(timeout);
+
+  debounced.flush = (...args) => {
+    clearTimeout(timeout);
+    fn.apply(this, args);
   };
+
+  return debounced;
 }
 
 /**
- * Escapes HTML characters in text for safe display
- * @param {string} str - Text to escape
- * @returns {string} Escaped text
+ * Escapes HTML special characters in text for safe display.
+ * Prevents XSS when inserting user content.
+ * @param {string|number} str - Text to escape.
+ * @returns {string} Escaped text.
  */
 export function escapeHtml(str) {
-  if (!str && str !== 0) return '';
-  return (''+str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }

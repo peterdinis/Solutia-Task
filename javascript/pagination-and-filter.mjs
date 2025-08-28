@@ -3,63 +3,52 @@ import { els, state } from "./state.mjs";
 /**
  * Populates the item select dropdown with available items.
  * Clears existing options and adds a default placeholder.
- *
- * @function
- * @returns {void}
  */
 export function populateItemSelect() {
   const sel = els.itemSelect;
+  if (!sel) return;
+
   sel.innerHTML = '<option value="">-- select an item --</option>';
-  state.items.forEach(it => {
-    const opt = document.createElement('option');
+  for (const it of state.items) {
+    const opt = document.createElement("option");
     opt.value = it.id;
     opt.textContent = `${it.name} (${it.type})`;
     sel.appendChild(opt);
-  });
+  }
 }
 
 /**
  * Populates the type filter dropdown with unique item types.
  * Clears existing options and adds a default "All types" option.
- *
- * @function
- * @returns {void}
  */
 export function populateTypeFilter() {
-  const types = Array.from(new Set(state.items.map(i => i.type))).sort();
   const sel = els.typeFilter;
+  if (!sel) return;
+
+  const types = [...new Set(state.items.map(i => i.type))].sort();
+
   sel.innerHTML = '<option value="">All types</option>';
-  types.forEach(t => {
-    const o = document.createElement('option');
-    o.value = t;
-    o.textContent = t;
-    sel.appendChild(o);
-  });
+  for (const t of types) {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
+  }
 }
 
 /**
  * Returns reservations filtered and sorted based on the current filters and sorting state.
- *
- * Filtering includes:
- * - Search term (employeeId or itemName)
- * - Item type
- * - Date range (from/to)
- * - Statuses
- *
- * Sorting is applied based on the current sort key and direction.
- *
- * @function
- * @returns {Array} Filtered and sorted list of reservations.
  */
 export function getFilteredReservations() {
   const f = state.filters;
-  let list = state.reservations.slice();
+  let list = [...state.reservations];
 
-  if (f.search && f.search.trim()) {
+  // --- filtering ---
+  if (f.search?.trim()) {
     const q = f.search.trim().toLowerCase();
     list = list.filter(r =>
-      (r.employeeId && r.employeeId.toLowerCase().includes(q)) ||
-      (r.itemName && r.itemName.toLowerCase().includes(q))
+      r.employeeId?.toLowerCase().includes(q) ||
+      r.itemName?.toLowerCase().includes(q)
     );
   }
 
@@ -78,20 +67,22 @@ export function getFilteredReservations() {
     list = list.filter(r => f.statuses.includes(r.status));
   }
 
-  const key = state.sort.key;
-  const dir = state.sort.dir === 'asc' ? 1 : -1;
+  // --- sorting ---
+  const { key, dir } = state.sort;
+  const direction = dir === "asc" ? 1 : -1;
+
   list.sort((a, b) => {
-    if (key === 'date' || key === 'returnDate') {
-      const av = a[key] || '';
-      const bv = b[key] || '';
-      if (av === bv) return 0;
-      return (av > bv ? 1 : -1) * dir;
-    } else {
-      const av = (a[key] || '').toString().toLowerCase();
-      const bv = (b[key] || '').toString().toLowerCase();
-      if (av === bv) return 0;
-      return (av > bv ? 1 : -1) * dir;
+    const av = a[key] ?? "";
+    const bv = b[key] ?? "";
+
+    if (key === "date" || key === "returnDate") {
+      return (new Date(av) - new Date(bv)) * direction;
     }
+
+    const as = String(av).toLowerCase();
+    const bs = String(bv).toLowerCase();
+    if (as === bs) return 0;
+    return (as > bs ? 1 : -1) * direction;
   });
 
   return list;
@@ -100,54 +91,59 @@ export function getFilteredReservations() {
 /**
  * Renders pagination controls based on total pages and active page.
  * Includes "Prev" and "Next" navigation, as well as numbered page buttons.
- *
- * @function
- * @param {number} totalPages - Total number of pages.
- * @param {number} activePage - Current active page.
- * @returns {void}
  */
 export function renderPagination(totalPages, activePage) {
-  els.pagination.innerHTML = '';
+  const container = els.pagination;
+  if (!container) return;
+  container.innerHTML = "";
+
+  const maxButtons = 7;
 
   /**
    * Creates an individual pagination element.
-   *
-   * @param {number} p - Page number to navigate to.
-   * @param {string|null} [text=null] - Custom text for the button (defaults to page number).
-   * @param {boolean} [disabled=false] - Whether the button is disabled.
-   * @param {boolean} [active=false] - Whether the button is the active page.
-   * @returns {HTMLElement} The created list item (`<li>`) containing the page link.
    */
-  const createPageItem = (p, text = null, disabled = false, active = false) => {
-    const li = document.createElement('li');
-    li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
-    const a = document.createElement('a');
-    a.className = 'page-link';
-    a.href = '#';
-    a.textContent = text || String(p);
-    a.addEventListener('click', (e) => {
+  const createPageItem = (page, label = null, disabled = false, active = false) => {
+    const li = document.createElement("li");
+    li.className = "page-item" + (disabled ? " disabled" : "") + (active ? " active" : "");
+
+    const a = document.createElement("a");
+    a.className = "page-link";
+    a.href = "#";
+    a.textContent = label || String(page);
+    a.addEventListener("click", e => {
       e.preventDefault();
-      if (!disabled) {
-        state.page = p;
+      if (!disabled && state.page !== page) {
+        state.page = page;
         renderTable();
       }
     });
+
     li.appendChild(a);
     return li;
   };
 
-  // Previous button
-  els.pagination.appendChild(createPageItem(Math.max(1, activePage - 1), 'Prev', activePage === 1));
+  // --- Previous ---
+  container.appendChild(createPageItem(
+    Math.max(1, activePage - 1),
+    "Prev",
+    activePage === 1
+  ));
 
-  // Numbered page buttons
-  const maxButtons = 7;
+  // --- Numbered pages ---
   let start = Math.max(1, activePage - Math.floor(maxButtons / 2));
   let end = Math.min(totalPages, start + maxButtons - 1);
-  if (end - start + 1 < maxButtons) start = Math.max(1, end - maxButtons + 1);
-  for (let p = start; p <= end; p++) {
-    els.pagination.appendChild(createPageItem(p, null, false, p === activePage));
+  if (end - start + 1 < maxButtons) {
+    start = Math.max(1, end - maxButtons + 1);
   }
 
-  // Next button
-  els.pagination.appendChild(createPageItem(Math.min(totalPages, activePage + 1), 'Next', activePage === totalPages));
+  for (let p = start; p <= end; p++) {
+    container.appendChild(createPageItem(p, null, false, p === activePage));
+  }
+
+  // --- Next ---
+  container.appendChild(createPageItem(
+    Math.min(totalPages, activePage + 1),
+    "Next",
+    activePage === totalPages
+  ));
 }

@@ -11,33 +11,55 @@ import { renderPagination } from "./pagination-and-filter.mjs";
 export function renderTable() {
   const data = getFilteredReservations();
   const total = data.length;
-  const pageSize = parseInt(state.pageSize, 10) || 10;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (state.page > pages) state.page = pages;
+  const pageSize = Number(state.pageSize) || 10;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const start = (state.page - 1) * pageSize;
-  const pageItems = data.slice(start, start + pageSize);
+  // clamp current page
+  if (state.page > totalPages) state.page = totalPages;
 
-  els.historyBody.innerHTML = '';
+  const startIndex = (state.page - 1) * pageSize;
+  const pageItems = data.slice(startIndex, startIndex + pageSize);
+
+  // reset table body
+  els.historyBody.innerHTML = "";
+
+  // handle empty state
+  els.emptyState.style.display = pageItems.length === 0 ? "block" : "none";
   if (pageItems.length === 0) {
-    els.emptyState.style.display = 'block';
-  } else {
-    els.emptyState.style.display = 'none';
+    renderPagination(totalPages, state.page);
+    return;
   }
 
+  // build rows efficiently
+  const fragment = document.createDocumentFragment();
+
   pageItems.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${formatDateDisplay(r.date)}</td>
-      <td>${escapeHtml(r.itemName)}</td>
-      <td>${escapeHtml(r.type)}</td>
-      <td></td>
-      <td>${formatDateDisplay(r.returnDate)}</td>
-    `;
-    const statusCell = tr.querySelector('td:nth-child(4)');
-    statusCell.appendChild(statusBadge(r.status));
-    els.historyBody.appendChild(tr);
+    const tr = document.createElement("tr");
+
+    const tdDate = document.createElement("td");
+    tdDate.textContent = formatDateDisplay(r.date);
+    tr.appendChild(tdDate);
+
+    const tdItem = document.createElement("td");
+    tdItem.textContent = escapeHtml(r.itemName);
+    tr.appendChild(tdItem);
+
+    const tdType = document.createElement("td");
+    tdType.textContent = escapeHtml(r.type);
+    tr.appendChild(tdType);
+
+    const tdStatus = document.createElement("td");
+    tdStatus.appendChild(statusBadge(r.status));
+    tr.appendChild(tdStatus);
+
+    const tdReturnDate = document.createElement("td");
+    tdReturnDate.textContent = formatDateDisplay(r.returnDate);
+    tr.appendChild(tdReturnDate);
+
+    fragment.appendChild(tr);
   });
 
-  renderPagination(pages, state.page);
+  els.historyBody.appendChild(fragment);
+
+  renderPagination(totalPages, state.page);
 }
