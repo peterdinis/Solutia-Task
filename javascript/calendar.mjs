@@ -10,7 +10,7 @@ const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
  * @param {number} month - Month (0-11)
  */
 export function renderCalendar(year, month) {
-  // vymažeme obsah kalendára
+  // clear the calendar content
   els.calendar.innerHTML = '';
 
   const firstOfMonth = new Date(year, month, 1);
@@ -18,14 +18,14 @@ export function renderCalendar(year, month) {
   const firstWeekDay = (firstOfMonth.getDay() + 6) % 7; // Monday start
   const daysInMonth = lastOfMonth.getDate();
 
-  // mesiac + rok label
+  // month + year label
   const monthName = firstOfMonth.toLocaleString('en-US', { month: 'long' });
   els.monthLabel.textContent = `${monthName} ${year}`;
 
-  // fragment pre efektívnejší render
+  // fragment for more efficient rendering
   const fragment = document.createDocumentFragment();
 
-  // hlavička dní
+  // header row for weekdays
   const headerRow = document.createElement('div');
   headerRow.className = 'row row-cols-7 g-1 mb-1';
   WEEKDAYS.forEach(w => {
@@ -36,7 +36,7 @@ export function renderCalendar(year, month) {
   });
   fragment.appendChild(headerRow);
 
-  // počet buniek (prázdne + dni mesiaca)
+  // total number of cells (empty + days of month)
   const totalCells = firstWeekDay + daysInMonth;
   const rows = Math.ceil(totalCells / 7);
 
@@ -68,15 +68,15 @@ export function renderCalendar(year, month) {
           <div class="small-muted">${reservationCount} reservation(s)</div>
         `;
 
-        // označenie dnešného dňa (bez mutovania d)
+        // highlight today (without muting)
         if (d.getTime() === today.getTime()) {
           cell.classList.add('today');
         }
 
-        // dostupnosť
+        // availability
         cell.classList.add(reservationCount === 0 ? 'available' : 'unavailable');
 
-        // klik event
+        // click event
         cell.addEventListener('click', () => {
           if (reservationCount > 0) {
             showFormAlert('This day is not available for new reservations.', 'warning');
@@ -97,6 +97,6 @@ export function renderCalendar(year, month) {
     fragment.appendChild(row);
   }
 
-  // vloženie naraz do DOM
+  // insert everything into the DOM at once
   els.calendar.appendChild(fragment);
 }
